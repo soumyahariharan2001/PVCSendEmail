@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Genesys Cloud Email API</title>
+  <script>
+    // Config
+    const clientId = "65d63bfb-daf9-4815-ade3-a444d1e02c82";
+    const redirectUri = "https://apps.mypurecloud.de";
+    const region = "mypurecloud.de";
+    const authUrl = `https://login.${region}/oauth/authorize`;
+ 
+    // Step 1: Check for access token in URL hash
+    function getTokenFromHash() {
+      const hash = window.location.hash.substr(1);
+      const params = new URLSearchParams(hash);
+      return params.get("access_token");
+    }
+ 
+    let accessToken = getTokenFromHash();
+ 
+    if (!accessToken) {
+      // Step 2: Redirect to Genesys login for implicit grant
+      const loginUrl = `${authUrl}?response_type=token&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+      window.location = loginUrl;
+    }
+ 
+    // Step 3: Once token is present, call the Email API
+    async function sendEmail() {
+      const url = `https://api.${region}/api/v2/conversations/emails`;
+ 
+      const body = {
+        "queueId": "8847e240-5787-4469-9212-0b02ea1905d9",
+        "toAddress": "partner.soumya.h@philips.com",     
+        "subject": "Test Email from Genesys Cloud",
+        "direction": "OUTBOUND",
+        "htmlBody": "<p>Hello, this is a test email.</p>"
+      };
+ 
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+      });
+ 
+      const result = await response.json();
+      console.log("API Response:", result);
+      document.getElementById("output").innerText = JSON.stringify(result, null, 2);
+    }
+  </script>
+</head>
+<body>
+  <h2>Send Email via Genesys Cloud</h2>
+  <button onclick="sendEmail()">Send Email</button>
+  <pre id="output"></pre>
+</body>
+</html>
