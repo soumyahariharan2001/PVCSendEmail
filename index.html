@@ -1,59 +1,69 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Genesys Cloud Email API</title>
+  <title>Auto Email via Genesys Cloud</title>
   <script>
-    // Config
+    // === Config ===
     const clientId = "65d63bfb-daf9-4815-ade3-a444d1e02c82";
-    const redirectUri = "https://apps.mypurecloud.de";
     const region = "mypurecloud.de";
     const authUrl = `https://login.${region}/oauth/authorize`;
+    const redirectUri = "https://soumyahariharan2001.github.io/PVCSendEmail/";
  
-    // Step 1: Check for access token in URL hash
+    // === Step 1: Extract query params from script ===
+    const urlParams = new URLSearchParams(window.location.search);
+    const customerEmail = urlParams.get("CustomerEmail");
+    const linkUrl = urlParams.get("url");
+ 
+    // === Step 2: Get token from hash ===
     function getTokenFromHash() {
       const hash = window.location.hash.substr(1);
       const params = new URLSearchParams(hash);
       return params.get("access_token");
     }
- 
     let accessToken = getTokenFromHash();
  
     if (!accessToken) {
-      // Step 2: Redirect to Genesys login for implicit grant
-      const loginUrl = `${authUrl}?response_type=token&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+      // Redirect to login (preserve query params so variables aren’t lost)
+      const loginUrl = `${authUrl}?response_type=token&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri + window.location.search)}`;
       window.location = loginUrl;
+    } else {
+      // Already authenticated → call API
+      sendEmail();
     }
  
-    // Step 3: Once token is present, call the Email API
+    // === Step 3: Send Email API ===
     async function sendEmail() {
       const url = `https://api.${region}/api/v2/conversations/emails`;
  
       const body = {
-        "queueId": "8847e240-5787-4469-9212-0b02ea1905d9",
-        "toAddress": "partner.soumya.h@philips.com",     
-        "subject": "Test Email from Genesys Cloud",
+        "queueId": "09c46740-bec5-486a-afce-94fdb5069fbd",
+        "toAddress": customerEmail,
+        "subject": "Teams Meeting URL",
         "direction": "OUTBOUND",
-        "htmlBody": "<p>Hello, this is a test email.</p>"
+        "textBody": `Please click on the link to join the meeting : ${linkUrl}`
       };
  
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${accessToken}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(body)
-      });
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${accessToken}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(body)
+        });
  
-      const result = await response.json();
-      console.log("API Response:", result);
-      document.getElementById("output").innerText = JSON.stringify(result, null, 2);
+        const result = await response.json();
+        console.log("✅ API Response:", result);
+        document.body.innerHTML = `<h3>Email conversation initiated</h3><pre>${JSON.stringify(result, null, 2)}</pre>`;
+      } catch (err) {
+        console.error("❌ API call failed:", err);
+        document.body.innerHTML = `<h3>Error</h3><pre>${err}</pre>`;
+      }
     }
   </script>
 </head>
 <body>
-  <h2>Send Email via Genesys Cloud</h2>
-  <button onclick="sendEmail()">Send Email</button>
-  <pre id="output"></pre>
+  <h2>Processing email…</h2>
 </body>
 </html>
