@@ -1,38 +1,42 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Auto Email via Genesys Cloud</title>
+  <title>Genesys Cloud Email API</title>
   <script>
-    // === Config ===
+    // CONFIGURATION
     const clientId = "65d63bfb-daf9-4815-ade3-a444d1e02c82";
     const region = "mypurecloud.de";
     const authUrl = `https://login.${region}/oauth/authorize`;
     const redirectUri = "https://soumyahariharan2001.github.io/PVCSendEmail/";
- 
-    // === Step 1: Extract query params from script ===
-    const urlParams = new URLSearchParams(window.location.search);
-    const customerEmail = urlParams.get("CustomerEmail");
-    const linkUrl = urlParams.get("url");
- 
-    // === Step 2: Get token from hash ===
+    // GET SCRIPT VARIABLES FROM QUERY PARAMS
+    const params = new URLSearchParams(window.location.search);
+    const CustomerEmail = params.get("CustomerEmail");
+    const customerUrl = params.get("url");
+    console.log("Fetched from Script:", CustomerEmail, customerUrl);
+    // OAUTH TOKEN HANDLING
     function getTokenFromHash() {
       const hash = window.location.hash.substr(1);
-      const params = new URLSearchParams(hash);
-      return params.get("access_token");
+      const searchParams = new URLSearchParams(hash);
+      return searchParams.get("access_token");
     }
+ 
     let accessToken = getTokenFromHash();
  
     if (!accessToken) {
-      // Redirect to login (preserve query params so variables aren’t lost)
-      const loginUrl = `${authUrl}?response_type=token&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri + window.location.search)}`;
+      // Redirect to Genesys login
+      const loginUrl = `${authUrl}?response_type=token&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}`;
       window.location = loginUrl;
-    } else {
-      // Already authenticated → call API
-      sendEmail();
     }
  
-    // === Step 3: Send Email API ===
+    // ==============================
+    // SEND EMAIL FUNCTION
+    // ==============================
     async function sendEmail() {
+      if (!CustomerEmail) {
+        document.getElementById("output").innerText = "❌ No CustomerEmail provided from script.";
+        return;
+      }
+ 
       const url = `https://api.${region}/api/v2/conversations/emails`;
  
       const body = {
@@ -40,7 +44,7 @@
         "toAddress": customerEmail,
         "subject": "Teams Meeting URL",
         "direction": "OUTBOUND",
-        "textBody": `Please click on the link to join the meeting : ${linkUrl}`
+        "textBody": `Please click on the link to join the meeting : ${customerUrl}`
       };
  
       try {
@@ -54,18 +58,24 @@
         });
  
         const result = await response.json();
-        console.log("✅ API Response:", result);
-        document.body.innerHTML = `<h3>Email conversation initiated</h3><pre>${JSON.stringify(result, null, 2)}</pre>`;
+        console.log("API Response:", result);
+        document.getElementById("output").innerText = JSON.stringify(result, null, 2);
       } catch (err) {
-        console.error("❌ API call failed:", err);
-        document.body.innerHTML = `<h3>Error</h3><pre>${err}</pre>`;
+        console.error("Error calling API:", err);
+        document.getElementById("output").innerText = `❌ Error: ${err.message}`;
       }
     }
+    // AUTO EXECUTE ON PAGE LOAD
+    window.onload = () => {
+      if (accessToken) {
+        sendEmail(); // Automatically send email once logged in
+      }
+    };
   </script>
 </head>
 <body>
-  <h2>Processing email…</h2>
+  <h2>Send Email via Genesys Cloud</h2>
+  <p>This will automatically send an outbound email when the page loads.</p>
+  <pre id="output"></pre>
 </body>
 </html>
-
-
